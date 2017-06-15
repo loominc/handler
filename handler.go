@@ -100,7 +100,7 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 
 		return &RequestOptions{}
 	case ContentTypeMultiPart:
-		if err := r.ParseMultipartForm(); err != nil {
+		if err := r.ParseMultipartForm(32 << 20); err != nil { // 32 MB
 			return &RequestOptions{}
 		}
 
@@ -114,7 +114,12 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 						return &RequestOptions{}
 					}
 
-					reqOpt[header.Filename] = ioutil.ReadAll(file)
+					data, err := ioutil.ReadAll(file)
+					if err != nil {
+						return &RequestOptions{}
+					}
+
+					reqOpt.Files[header.Filename] = data
 				}
 			}
 
