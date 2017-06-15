@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -380,5 +381,31 @@ func TestRequestOptions_POST_UnsupportedContentType(t *testing.T) {
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Fatalf("wrong result, graphql result diff: %v", testutil.Diff(expected, result))
+	}
+}
+
+func TestRequestOptions_POST_WithFile(t *testing.T) {
+	body := `query RebelsShipsQuery { rebels { name } }`
+	file := []byte(`some file bytes`)
+	expected := &RequestOptions{
+		Query: body,
+		Files: map[string][]byte{
+			"file": []byte(`some file bytes`),
+		},
+	}
+
+	buf := &bytes.Buffer{}
+	writer := multipart.NewWriter(buf)
+	writer.WriteField("query", body)
+	part, _ := writer.CreateFormFile("file", "filename")
+	part.Write(file)
+	writer.Close()
+
+	req, _ := http.NewRequest("POST", "/graphql", buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	result := NewRequestOptions(req)
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("wrong result, diff: %v", testutil.Diff(expected, result))
 	}
 }

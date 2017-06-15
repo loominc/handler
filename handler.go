@@ -107,7 +107,7 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 		if reqOpt := getFromForm(r.PostForm); reqOpt != nil {
 			reqOpt.Files = make(map[string][]byte)
 
-			for _, headers := range r.MultipartForm.File {
+			for formKey, headers := range r.MultipartForm.File {
 				for _, header := range headers {
 					file, err := header.Open()
 					if err != nil {
@@ -119,7 +119,7 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 						return &RequestOptions{}
 					}
 
-					reqOpt.Files[header.Filename] = data
+					reqOpt.Files[formKey] = data
 				}
 			}
 
