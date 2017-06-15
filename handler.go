@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -8,25 +9,25 @@ import (
 	"strings"
 
 	"github.com/graphql-go/graphql"
-
-	"golang.org/x/net/context"
 )
 
 const (
 	ContentTypeJSON           = "application/json"
 	ContentTypeGraphQL        = "application/graphql"
 	ContentTypeFormURLEncoded = "application/x-www-form-urlencoded"
+	ContentTypeMultiPart      = "multipart/form-data"
 )
 
 type Handler struct {
 	Schema *graphql.Schema
-	
 	pretty bool
 }
+
 type RequestOptions struct {
 	Query         string                 `json:"query" url:"query" schema:"query"`
 	Variables     map[string]interface{} `json:"variables" url:"variables" schema:"variables"`
 	OperationName string                 `json:"operationName" url:"operationName" schema:"operationName"`
+	Files         map[string][]byte
 }
 
 // a workaround for getting`variables` as a JSON string
@@ -35,6 +36,12 @@ type requestOptionsCompatibility struct {
 	Variables     string `json:"variables" url:"variables" schema:"variables"`
 	OperationName string `json:"operationName" url:"operationName" schema:"operationName"`
 }
+
+type contextKey int
+
+const (
+	FileContextKey contextKey = iota
+)
 
 func getFromForm(values url.Values) *RequestOptions {
 	query := values.Get("query")
@@ -92,7 +99,29 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 		}
 
 		return &RequestOptions{}
+	case ContentTypeMultiPart:
+		if err := r.ParseMultipartForm(); err != nil {
+			return &RequestOptions{}
+		}
 
+		if reqOpt := getFromForm(r.PostForm); reqOpt != nil {
+			reqOpt.Files = make(map[string][]byte)
+
+			for _, headers := range r.MultipartForm.File {
+				for _, header := range headers {
+					file, err := header.Open()
+					if err != nil {
+						return &RequestOptions{}
+					}
+
+					reqOpt[header.Filename] = ioutil.ReadAll(file)
+				}
+			}
+
+			return reqOpt
+		}
+
+		return &RequestOptions{}
 	case ContentTypeJSON:
 		fallthrough
 	default:
@@ -125,11 +154,10 @@ func (h *Handler) ContextHandler(ctx context.Context, w http.ResponseWriter, r *
 		RequestString:  opts.Query,
 		VariableValues: opts.Variables,
 		OperationName:  opts.OperationName,
-		Context:        ctx,
+		Context:        context.WithValue(ctx, FileContextKey, opts.Files),
 	}
 	result := graphql.Do(params)
 
-	
 	if h.pretty {
 		w.WriteHeader(http.StatusOK)
 		buff, _ := json.MarshalIndent(result, "", "\t")
@@ -138,14 +166,14 @@ func (h *Handler) ContextHandler(ctx context.Context, w http.ResponseWriter, r *
 	} else {
 		w.WriteHeader(http.StatusOK)
 		buff, _ := json.Marshal(result)
-	
+
 		w.Write(buff)
 	}
 }
 
 // ServeHTTP provides an entrypoint into executing graphQL queries.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.ContextHandler(context.Background(), w, r)
+	h.ContextHandler(r.Context(), w, r)
 }
 
 type Config struct {
