@@ -386,9 +386,15 @@ func TestRequestOptions_POST_UnsupportedContentType(t *testing.T) {
 
 func TestRequestOptions_POST_WithFile(t *testing.T) {
 	body := `query RebelsShipsQuery { rebels { name } }`
+	variables := "{ \"a\": 1, \"b\": \"2\" }"
+
 	file := []byte(`some file bytes`)
 	expected := &RequestOptions{
 		Query: body,
+		Variables: map[string]interface{}{
+			"a": float64(1),
+			"b": "2",
+		},
 		Files: map[string][]byte{
 			"file": []byte(`some file bytes`),
 		},
@@ -397,6 +403,7 @@ func TestRequestOptions_POST_WithFile(t *testing.T) {
 	buf := &bytes.Buffer{}
 	writer := multipart.NewWriter(buf)
 	writer.WriteField("query", body)
+	writer.WriteField("variables", variables)
 	part, _ := writer.CreateFormFile("file", "filename")
 	part.Write(file)
 	writer.Close()
