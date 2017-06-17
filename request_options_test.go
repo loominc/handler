@@ -395,8 +395,11 @@ func TestRequestOptions_POST_WithFile(t *testing.T) {
 			"a": float64(1),
 			"b": "2",
 		},
-		Files: map[string][]byte{
-			"file": []byte(`some file bytes`),
+		Files: map[string]File{
+			"file": File{
+				Name: "filename",
+				Data: []byte(`some file bytes`),
+			},
 		},
 	}
 

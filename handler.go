@@ -23,11 +23,16 @@ type Handler struct {
 	pretty bool
 }
 
+type File struct {
+	Name string
+	Data []byte
+}
+
 type RequestOptions struct {
 	Query         string                 `json:"query" url:"query" schema:"query"`
 	Variables     map[string]interface{} `json:"variables" url:"variables" schema:"variables"`
 	OperationName string                 `json:"operationName" url:"operationName" schema:"operationName"`
-	Files         map[string][]byte
+	Files         map[string]File
 }
 
 // a workaround for getting`variables` as a JSON string
@@ -105,7 +110,7 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 		}
 
 		if reqOpt := getFromForm(r.PostForm); reqOpt != nil {
-			reqOpt.Files = make(map[string][]byte)
+			reqOpt.Files = make(map[string]File)
 
 			for formKey, headers := range r.MultipartForm.File {
 				for _, header := range headers {
@@ -119,7 +124,10 @@ func NewRequestOptions(r *http.Request) *RequestOptions {
 						return &RequestOptions{}
 					}
 
-					reqOpt.Files[formKey] = data
+					reqOpt.Files[formKey] = File{
+						Name: header.Filename,
+						Data: data,
+					}
 				}
 			}
 
