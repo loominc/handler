@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -170,6 +171,9 @@ func (h *Handler) ContextHandler(ctx context.Context, w http.ResponseWriter, r *
 		Context:        context.WithValue(ctx, FileContextKey, opts.Files),
 	}
 	result := graphql.Do(params)
+	if result.HasErrors() {
+		log.Printf("GraphQL Error: %v\n", result.Errors)
+	}
 
 	if h.pretty {
 		w.WriteHeader(http.StatusOK)
