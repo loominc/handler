@@ -22,6 +22,7 @@ const (
 type Handler struct {
 	Schema *graphql.Schema
 	pretty bool
+	PanicHandler func(err error)
 }
 
 type File struct {
@@ -169,6 +170,7 @@ func (h *Handler) ContextHandler(ctx context.Context, w http.ResponseWriter, r *
 		VariableValues: opts.Variables,
 		OperationName:  opts.OperationName,
 		Context:        context.WithValue(ctx, FileContextKey, opts.Files),
+		PanicHandler:   h.PanicHandler,
 	}
 	result := graphql.Do(params)
 	if result.HasErrors() {
@@ -196,6 +198,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type Config struct {
 	Schema *graphql.Schema
 	Pretty bool
+	PanicHandler func(err error)
 }
 
 func NewConfig() *Config {
@@ -216,5 +219,6 @@ func New(p *Config) *Handler {
 	return &Handler{
 		Schema: p.Schema,
 		pretty: p.Pretty,
+		PanicHandler: p.PanicHandler,
 	}
 }
