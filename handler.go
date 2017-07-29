@@ -20,9 +20,9 @@ const (
 )
 
 type Handler struct {
-	Schema *graphql.Schema
-	pretty bool
-	PanicHandler func(err error)
+	Schema       *graphql.Schema
+	pretty       bool
+	PanicHandler func(ctx context.Context, err error)
 }
 
 type File struct {
@@ -196,9 +196,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Config struct {
-	Schema *graphql.Schema
-	Pretty bool
-	PanicHandler func(err error)
+	Schema       *graphql.Schema
+	Pretty       bool
+	PanicHandler func(ctx context.Context, err error)
 }
 
 func NewConfig() *Config {
@@ -217,8 +217,8 @@ func New(p *Config) *Handler {
 	}
 
 	return &Handler{
-		Schema: p.Schema,
-		pretty: p.Pretty,
+		Schema:       p.Schema,
+		pretty:       p.Pretty,
 		PanicHandler: p.PanicHandler,
 	}
 }
